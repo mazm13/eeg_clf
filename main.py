@@ -1,11 +1,12 @@
 from __future__ import print_function
 
 import torch
+import numpy as np
 import torch.optim as optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
-from dataloader import BraveData, evalDataSet
+from dataloader import TrainData, EvalData
 from model import Clf
 
 from datetime import datetime
@@ -21,12 +22,22 @@ def adjust_learning_rate(optimizer, epoch):
 
 
 if __name__ == '__main__':
-    train_data = BraveData(range(1, 20))
+    data3k_len = 38211
+    bound = int(data3k_len * 0.5)
+    shuffled_index = np.arange(data3k_len)
+    np.random.shuffle(shuffled_index)
+    shuffled_train = shuffled_index[:bound]
+    shuffled_eval = shuffled_index[bound:]
+
+    train_data = TrainData(shuffled_train)
     train_loader = DataLoader(train_data, batch_size=100, shuffle=True, num_workers=0)
 
     scalar = train_data.get_transform()
-    test_data = BraveData([20], pca=None, scalar=scalar)
+    test_data = EvalData(shuffled_eval, scalar=scalar)
     test_loader = DataLoader(test_data, batch_size=100, shuffle=True, num_workers=0)
+
+    #print(len(train_loader.dataset))
+    #exit(0)
 
     clf = Clf()
     clf = clf.cuda()
@@ -40,9 +51,9 @@ if __name__ == '__main__':
     def train(epoch):
         clf.train()
         adjust_learning_rate(optimizer, epoch)
-        for batch_idx, (data, label) in enumerate(train_loader):
-            data, label = data.cuda(), label.cuda()
-            data, label = Variable(data), Variable(label)
+        for batch_idx, (data_e, label_e) in enumerate(train_loader):
+            data_c, label_c = data_e.cuda(), label_e.cuda()
+            data, label = Variable(data_c), Variable(label_c)
             pred = clf(data)
             loss = F.nll_loss(pred, label)
             clf.zero_grad()
@@ -80,7 +91,9 @@ if __name__ == '__main__':
         if test():
             break
 
+    exit(0)
     # Evaluation
+    '''
     clf.eval()
     idx, evalData, evalLabel = evalDataSet(scalar=scalar)
     f = open("ret.txt", "a")
@@ -102,3 +115,4 @@ if __name__ == '__main__':
 
     f.write("Test accurary: {}".format(float(correct) / evalData.shape[0]))
     f.close()
+    '''

@@ -7,7 +7,7 @@ class Clf(nn.Module):
         super(Clf, self).__init__()
         self.fc1 = nn.Linear(1000, 1000)
         self.fc2 = nn.Linear(1000, 50)
-        self.fc3 = nn.Linear(50, 3)
+        self.fc3 = nn.Linear(50, 6)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))

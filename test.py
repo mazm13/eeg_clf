@@ -8,6 +8,34 @@ root_dir = './data/'
 dprefix = "datas/sleep_data_row3_"
 lprefix = "labels/HypnogramAASM_subject"
 
+test_1222 = './data/datas/test_1222.mat'
+train3k = './data/datas/train_1222.mat'
+
+
+mat = sio.loadmat(train3k)
+#data = np.array(mat['final_test'])
+#print(data.shape)
+#print(mat)
+datas = []
+for key in mat:
+    #datas.append(np.array(mat[key]))
+    if key in ['__header__', '__version__', '__globals__']:
+        continue
+    data = np.array(mat[key])
+    datas.append(data)
+datas = np.concatenate(datas)
+#print(len(datas))
+#print(datas.shape)
+#exit(0)
+
+label_set = []
+for i in range(datas.shape[0]):
+    label_set.append(datas[i][-1])
+
+labels = list(set(label_set))
+print(labels)
+exit(0)
+
 file_ids = range(1, 20)
 
 datas = []
@@ -21,7 +49,7 @@ for i in file_ids:
 data_ = np.concatenate(datas)
 
 labels = []
-for i in file_ids:
+for i in range(1,21):
     path = os.path.join(root_dir, lprefix + str(i) + ".txt")
     data = []
     f = open(path, "r")
@@ -31,6 +59,15 @@ for i in file_ids:
         data.append(int(line))
     labels.append(np.array(data))
 label_ = np.concatenate(labels)
+
+print(label_.shape)
+ll = []
+for i in range(label_.shape[0]):
+    ll.append(int(label_[i]))
+
+ll = list(set(ll))
+print(ll)
+exit(0)
 
 idx = np.where((label_ <= 3) & (label_ >= 1))
 data_ = data_[idx]
