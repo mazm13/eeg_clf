@@ -1,8 +1,10 @@
 import numpy as np
 import os
 import scipy.io as sio
+from scipy.fftpack import fft
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+from matplotlib import pyplot as plt
 
 root_dir = './data/'
 dprefix = "datas/sleep_data_row3_"
@@ -11,22 +13,44 @@ lprefix = "labels/HypnogramAASM_subject"
 test_1222 = './data/datas/test_1222.mat'
 train3k = './data/datas/train_1222.mat'
 
-
 mat = sio.loadmat(train3k)
-#data = np.array(mat['final_test'])
-#print(data.shape)
-#print(mat)
+# data = np.array(mat['final_test'])
+# print(data.shape)
+# print(mat)
 datas = []
 for key in mat:
-    #datas.append(np.array(mat[key]))
+    # datas.append(np.array(mat[key]))
     if key in ['__header__', '__version__', '__globals__']:
         continue
     data = np.array(mat[key])
     datas.append(data)
 datas = np.concatenate(datas)
-#print(len(datas))
-#print(datas.shape)
-#exit(0)
+
+index = np.random.randint(0, len(datas))
+data = datas[index][:3000]
+plt.plot(data, color='blue')
+
+f1 = fft(data)
+
+path = os.path.join(root_dir, dprefix + str(10))
+mat = sio.loadmat(path)
+datas = np.array(mat['data']).squeeze()
+datas = np.reshape(datas, (len(datas) // 1000, 1000))
+data = datas[10]
+
+plt.plot(data, color='red')
+
+f2 = fft(data)
+
+plt.show()
+
+plt.plot(f1)
+plt.plot(f2, c='yellow')
+plt.show()
+
+'''
+exit(0)
+
 
 label_set = []
 for i in range(datas.shape[0]):
@@ -86,3 +110,4 @@ print(max_data)
 print(min_data)
 
 #print(m_data.shape)
+'''
