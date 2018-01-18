@@ -35,8 +35,43 @@ def load_train3k(shuffled_index):
 # dimensionality reduced from 3k to 1k
 def sample(data):
     index = np.arange(1000) * 2
-    data = data[:,index]
+    data = data[:, index]
     return data
+
+
+class Data3k(Dataset):
+    def __init__(self, shuffled_index, scalar=None):
+        data3k = load_train3k(shuffled_index)
+        datas = data3k[:,:-1]
+        labels = data3k[:,-1].astype(int)
+
+        if scalar is None:
+            scalar = StandardScaler()
+            datas = scalar.fit_transform(datas)
+            self.scalar = scalar
+        else:
+            datas = scalar.transform(datas)
+
+        idx = np.where((labels <= 3) & (labels >= 1))
+        datas = datas[idx]
+        labels = labels[idx]
+
+        idx = np.where(labels == 3)
+        labels[idx] = 0
+
+        self.datas = torch.from_numpy(datas).float()
+        self.labels = torch.from_numpy(labels).long()
+
+    def __getitem__(self, item):
+        return self.datas[item], self.labels[item]
+
+    def __len__(self):
+        return len(self.datas)
+
+    def get_transform(self):
+        # return self.pca, self.scalar
+        return self.scalar
+
 
 class TrainData(Dataset):
     def __init__(self, shuffled_index):
@@ -63,13 +98,13 @@ class TrainData(Dataset):
         label_ = np.concatenate(labels)
 
         idx = np.where(label_ != -1)
-        data_ = data_[idx] # 121490*1000
-        label_ = label_[idx] # shape with (121490,)
+        data_ = data_[idx]  # 121490*1000
+        label_ = label_[idx]  # shape with (121490,)
 
         # add train3k
         data3k = load_train3k(shuffled_index)
-        data3k_data = data3k[:,:-1]
-        data3k_label = data3k[:,-1] #shape with (19105,)
+        data3k_data = data3k[:, :-1]
+        data3k_label = data3k[:, -1]  # shape with (19105,)
 
         data3k_data = sample(data3k_data)
 
@@ -105,12 +140,12 @@ class TrainData(Dataset):
 class EvalData(Dataset):
     def __init__(self, shuffled_index, scalar):
         data3k = load_train3k(shuffled_index)
-        data = data3k[:,:-1]
+        data = data3k[:, :-1]
         data = sample(data)
         data = scalar.transform(data)
 
         data_ = data
-        label_ = data3k[:,-1].astype(int)
+        label_ = data3k[:, -1].astype(int)
 
         idx = np.where((label_ <= 3) & (label_ >= 1))
         data_ = data_[idx]

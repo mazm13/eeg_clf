@@ -5,7 +5,7 @@ import torch.nn.functional as F
 class Clf(nn.Module):
     def __init__(self):
         super(Clf, self).__init__()
-        self.fc1 = nn.Linear(1000, 1000)
+        self.fc1 = nn.Linear(3000, 1000)
         self.fc2 = nn.Linear(1000, 50)
         self.fc3 = nn.Linear(50, 6)
 
