@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-import torch
+import tensorflow as tf
 import numpy as np
 import torch.optim as optim
 from torch.autograd import Variable
@@ -8,9 +8,6 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from dataloader import TrainData, EvalData, Data3k
 from model import Clf
-
-from datetime import datetime
-import time
 
 
 def adjust_learning_rate(optimizer, epoch):
@@ -20,6 +17,10 @@ def adjust_learning_rate(optimizer, epoch):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
+
+def add_summary_value(writer, key, value, iteration):
+    summary = tf.Summary(value=[tf.Summary.Value(tag=key, simple_value=value)])
+    writer.add_summary(summary, iteration)
 
 if __name__ == '__main__':
     data3k_len = 38211
@@ -43,14 +44,13 @@ if __name__ == '__main__':
     clf = clf.cuda()
 
     optimizer = optim.SGD(clf.parameters(), lr=0.001)
-
-
     # optimizer = optim.Adam(clf.parameters(), lr=0.0001)
+    tf_summary_writer = tf.summary.FileWriter('./models/')
 
-
-    def train(epoch):
+    def train(epoch, start_iter):
         clf.train()
         adjust_learning_rate(optimizer, epoch)
+        it = start_iter
         for batch_idx, (data_e, label_e) in enumerate(train_loader):
             data_c, label_c = data_e.cuda(), label_e.cuda()
             data, label = Variable(data_c), Variable(label_c)
@@ -61,9 +61,13 @@ if __name__ == '__main__':
             optimizer.step()
             if batch_idx % 100 == 0:
                 print('Epoch:{} Loss: {:.6f}'.format(epoch, loss.data[0]))
+            add_summary_value(tf_summary_writer, 'train_loss', loss.data[0], iteration=it)
+            tf_summary_writer.flush()
+            it += 1
+        return it
 
 
-    def test():
+    def test(epoch):
         clf.eval()
         test_loss = 0
         correct = 0
@@ -76,22 +80,28 @@ if __name__ == '__main__':
             correct += pred.eq(label.data.view_as(pred)).cpu().sum()
 
         test_loss /= len(test_loader.dataset)
+        accu = correct / len(test_loader.dataset)
         print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
             test_loss, correct, len(test_loader.dataset),
-            100. * correct / len(test_loader.dataset)))
-
-        if float(correct) / len(test_loader.dataset) > 0.82:
-            return True
-        else:
-            return False
+            100. * accu))
+        add_summary_value(tf_summary_writer, 'Test Accuracy', accu, iteration=epoch)
+        tf_summary_writer.flush()
 
 
-    for _ in range(100):
-        train(_)
-        if test():
+        #if float(correct) / len(test_loader.dataset) > 0.82:
+        #    return True
+        #else:
+        #    return False
+        return False
+
+
+    iteration = 0
+    for _ in range(200):
+        iteration = train(_, iteration)
+        if test(_):
             break
 
-    exit(0)
+
     # Evaluation
     '''
     clf.eval()
