@@ -193,3 +193,10 @@ def evalDataSet(scalar):
 
     label_ = label_[idx]
     return idx, data_, label_
+
+def loadTestData():
+    mat = sio.loadmat(test3k_path)
+    datas = mat['final_test']
+    scalar = StandardScaler()
+    datas = scalar.fit_transform(datas)
+    return torch.from_numpy(datas).float()

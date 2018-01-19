@@ -6,7 +6,7 @@ import torch.optim as optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
-from dataloader import TrainData, EvalData, Data3k
+from dataloader import Data3k, loadTestData
 from model import Clf
 
 
@@ -22,23 +22,45 @@ def add_summary_value(writer, key, value, iteration):
     summary = tf.Summary(value=[tf.Summary.Value(tag=key, simple_value=value)])
     writer.add_summary(summary, iteration)
 
+
+def final_test(net):
+    datas = loadTestData()
+    # datas = Variable(datas).cuda()
+    n = datas.shape[0]
+
+    labels = []
+    for i in range(n):
+        #data = datas[i].unsqueeze(0)
+        data = datas[i:i+1]
+        data = Variable(data.cuda())
+        logits = net(data)
+        pred = logits.data.max(1, keepdim=True)[1].cpu().numpy()[0]
+        if pred == 0:
+            pred = 3
+        labels.append(pred)
+
+    with open('test_predict', 'w') as f:
+        f.truncate()
+        f.writelines(["%d\n" % it for it in labels])
+
+
 if __name__ == '__main__':
     data3k_len = 38211
-    bound = int(data3k_len * 0.8)
+    bound = int(data3k_len * 0.9)
     shuffled_index = np.arange(data3k_len)
     np.random.shuffle(shuffled_index)
     shuffled_train = shuffled_index[:bound]
     shuffled_eval = shuffled_index[bound:]
 
     train_data = Data3k(shuffled_train)
-    train_loader = DataLoader(train_data, batch_size=100, shuffle=True, num_workers=0)
+    train_loader = DataLoader(train_data, batch_size=64, shuffle=True, num_workers=0)
 
     scalar = train_data.get_transform()
-    test_data = Data3k(shuffled_eval, scalar=scalar)
-    test_loader = DataLoader(test_data, batch_size=100, shuffle=True, num_workers=0)
+    test_data = Data3k(shuffled_eval, scalar=None)
+    test_loader = DataLoader(test_data, batch_size=64, shuffle=True, num_workers=0)
 
-    #print(len(train_loader.dataset))
-    #exit(0)
+    # print(len(train_loader.dataset))
+    # exit(0)
 
     clf = Clf()
     clf = clf.cuda()
@@ -46,6 +68,7 @@ if __name__ == '__main__':
     optimizer = optim.SGD(clf.parameters(), lr=0.001)
     # optimizer = optim.Adam(clf.parameters(), lr=0.0001)
     tf_summary_writer = tf.summary.FileWriter('./models/')
+
 
     def train(epoch, start_iter):
         clf.train()
@@ -87,10 +110,9 @@ if __name__ == '__main__':
         add_summary_value(tf_summary_writer, 'Test Accuracy', accu, iteration=epoch)
         tf_summary_writer.flush()
 
-
-        #if float(correct) / len(test_loader.dataset) > 0.82:
+        # if float(correct) / len(test_loader.dataset) > 0.82:
         #    return True
-        #else:
+        # else:
         #    return False
         return False
 
@@ -100,6 +122,9 @@ if __name__ == '__main__':
         iteration = train(_, iteration)
         if test(_):
             break
+
+    clf.eval()
+    final_test(clf)
 
 
     # Evaluation

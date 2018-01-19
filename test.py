@@ -13,7 +13,11 @@ lprefix = "labels/HypnogramAASM_subject"
 test_1222 = './data/datas/test_1222.mat'
 train3k = './data/datas/train_1222.mat'
 
-mat = sio.loadmat(train3k)
+mat = sio.loadmat(test_1222)
+datas = mat['final_test']
+datas = np.fft.fft(datas)
+print(datas)
+exit(0)
 # data = np.array(mat['final_test'])
 # print(data.shape)
 # print(mat)
